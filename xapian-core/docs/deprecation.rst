@@ -449,9 +449,11 @@ Removed Feature name                        Upgrade suggestion and comments
 ------- ----------------------------------- ----------------------------------------------------------------------------------
 1.3.2   ``Xapian::Auto::open_stub()``       Use the constructor with ``Xapian::DB_BACKEND_STUB`` flag (new in 1.3.2) instead.
 ------- ----------------------------------- ----------------------------------------------------------------------------------
-1.3.2   ``Xapian::Brass::open()``           Use the constructor with ``Xapian::DB_BACKEND_BRASS`` flag (new in 1.3.2) instead.
-------- ----------------------------------- ----------------------------------------------------------------------------------
 1.3.2   ``Xapian::Chert::open()``           Use the constructor with ``Xapian::DB_BACKEND_CHERT`` flag (new in 1.3.2) instead.
+------- ----------------------------------- ----------------------------------------------------------------------------------
+1.3.2   The Brass backend                   Use the Glass backend instead.
+------- ----------------------------------- ----------------------------------------------------------------------------------
+1.3.2   ``Xapian::Brass::open()``           Use the constructor with ``Xapian::DB_BACKEND_GLASS`` flag (new in 1.3.2) instead.
 ======= =================================== ==================================================================================
 
 
@@ -560,7 +562,7 @@ Removed Language Feature name                 Upgrade suggestion and comments
 
 .. [#rswg] This affects all SWIG generated bindings (currently: Python, PHP, Ruby, Tcl8 and CSharp)
 
-.. [#rsw2] This affects all SWIG-generated bindings except those for Ruby, support for which was added after the function waan-core.
+.. [#rsw2] This affects all SWIG-generated bindings except those for Ruby, support for which was added after the function was deprecated in Xapian-core.
 
 .. [#rsw3] This affects all SWIG generated bindings except those for Ruby, which was added after the function was deprecated in Xapian-core, and PHP, where empty is a reserved word (and therefore, the method remains "is_empty").
 

@@ -86,7 +86,8 @@ class RemoteDatabase : public Xapian::Database::Internal {
      */
     mutable Xapian::valueno mru_slot;
 
-    bool update_stats(message_type msg_code = MSG_UPDATE) const;
+    bool update_stats(message_type msg_code = MSG_UPDATE,
+		      const std::string & body = std::string()) const;
 
   protected:
     /** Constructor.  The constructor is protected so that raw instances
@@ -101,9 +102,10 @@ class RemoteDatabase : public Xapian::Database::Internal {
      *			operations will never timeout.
      *  @param context_ The context to return with any error messages.
      *	@param writable	Is this a WritableDatabase?
+     *	@param flags	Xapian::DB_RETRY_LOCK or 0.
      */
     RemoteDatabase(int fd, double timeout_, const string & context_,
-		   bool writable);
+		   bool writable, int flags);
 
     /// Receive a message from the server.
     reply_type get_message(string & message, reply_type required_type = REPLY_MAX) const;
@@ -213,6 +215,7 @@ class RemoteDatabase : public Xapian::Database::Internal {
     Xapian::doclength get_avlength() const;
 
     Xapian::termcount get_doclength(Xapian::docid did) const;
+    Xapian::termcount get_unique_terms(Xapian::docid did) const;
 
     /// Check if term exists.
     bool term_exists(const string & tname) const;

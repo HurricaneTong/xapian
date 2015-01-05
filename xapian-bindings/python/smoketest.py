@@ -1,7 +1,7 @@
 # Simple test to ensure that we can load the xapian module and exercise basic
 # functionality successfully.
 #
-# Copyright (C) 2004,2005,2006,2007,2008,2010,2011,2012 Olly Betts
+# Copyright (C) 2004,2005,2006,2007,2008,2010,2011,2012,2014 Olly Betts
 # Copyright (C) 2007 Lemur Consulting Ltd
 #
 # This program is free software; you can redistribute it and/or
@@ -19,6 +19,7 @@
 # Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301
 # USA
 
+import os
 import sys
 import xapian
 
@@ -105,11 +106,6 @@ def test_all():
                      xapian.open_stub, "nosuchdir/nosuchdb")
     expect_exception(xapian.DatabaseOpeningError, None,
                      xapian.open_stub, "nosuchdir/nosuchdb", xapian.DB_OPEN)
-
-    expect_exception(xapian.DatabaseOpeningError, None,
-                     xapian.brass_open, "nosuchdir/nosuchdb")
-    expect_exception(xapian.DatabaseCreateError, None,
-                     xapian.brass_open, "nosuchdir/nosuchdb", xapian.DB_CREATE)
 
     expect_exception(xapian.DatabaseOpeningError, None,
                      xapian.chert_open, "nosuchdir/nosuchdb")
@@ -344,6 +340,19 @@ def test_all():
     expect_query(qp.parse_query(u"foo bar b", qp.FLAG_BOOLEAN),
                  "(Zfoo@1 AND Zbar@2)")
 
+    # Test SimpleStopper initialised from a file.
+    try:
+        srcdir = os.environ['srcdir']
+    except KeyError:
+        srcdir = '.'
+    stop = xapian.SimpleStopper(srcdir + '/../shortstop.list')
+    expect(stop('a'), True)
+    expect(stop('am'), False)
+    expect(stop('an'), True)
+    expect(stop('the'), True)
+
+    expect_exception(xapian.InvalidArgumentError, None, xapian.SimpleStopper, 'nosuchfile')
+
     # Test TermGenerator
     termgen = xapian.TermGenerator()
     doc = xapian.Document()
@@ -369,6 +378,21 @@ def test_all():
     expect(slot, 0)
     expect(xapian.sortable_unserialise(a), 10)
     expect(xapian.sortable_unserialise(b), 20)
+
+    # Feature test for xapian.FieldProcessor
+    context("running feature test for xapian.FieldProcessor")
+    class testfieldprocessor(xapian.FieldProcessor):
+        def __call__(self, s):
+            if s == 'spam':
+                raise Exception('already spam')
+            return xapian.Query("spam")
+
+    qp.add_prefix('spam', testfieldprocessor())
+    qp.add_boolean_prefix('boolspam', testfieldprocessor())
+    query = qp.parse_query('spam:ignored')
+    expect(str(query), 'Query(spam)')
+
+    expect_exception(Exception, 'already spam', qp.parse_query, 'spam:spam')
 
     # Regression tests copied from PHP (probably always worked in python, but
     # let's check...)

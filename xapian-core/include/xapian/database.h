@@ -25,7 +25,7 @@
 #ifndef XAPIAN_INCLUDED_DATABASE_H
 #define XAPIAN_INCLUDED_DATABASE_H
 
-#if !defined XAPIAN_INCLUDED_XAPIAN_H && !defined XAPIAN_LIB_BUILD
+#if !defined XAPIAN_IN_XAPIAN_H && !defined XAPIAN_LIB_BUILD
 # error "Never use <xapian/database.h> directly; include <xapian.h> instead."
 #endif
 
@@ -210,32 +210,16 @@ class XAPIAN_VISIBILITY_DEFAULT Database {
 	    return PositionIterator();
 	}
 
-	/** An iterator which runs across all terms in the database.
-	 */
-	TermIterator allterms_begin() const;
-
-	/** Corresponding end iterator to allterms_begin().
-	 */
-	TermIterator XAPIAN_NOTHROW(allterms_end() const) {
-	    return TermIterator();
-	}
-
 	/** An iterator which runs across all terms with a given prefix.
 	 *
-	 *  This is functionally similar to getting an iterator with
-	 *  allterms_begin() and then calling skip_to(prefix) on that iterator
-	 *  to move to the start of the prefix, but is more convenient (because
-	 *  it detects the end of the prefixed terms), and may be more
-	 *  efficient than simply calling skip_to() after opening the iterator,
-	 *  particularly for remote databases.
-	 *
-	 *  @param prefix The prefix to restrict the returned terms to.
+	 *  @param prefix The prefix to restrict the returned terms to (default:
+	 *		  iterate all terms)
 	 */
-	TermIterator allterms_begin(const std::string & prefix) const;
+	TermIterator allterms_begin(const std::string & prefix = std::string()) const;
 
 	/** Corresponding end iterator to allterms_begin(prefix).
 	 */
-	TermIterator XAPIAN_NOTHROW(allterms_end(const std::string &) const) {
+	TermIterator XAPIAN_NOTHROW(allterms_end(const std::string & = std::string()) const) {
 	    return TermIterator();
 	}
 
@@ -330,6 +314,9 @@ class XAPIAN_VISIBILITY_DEFAULT Database {
 
 	/// Get the length of a document.
 	Xapian::termcount get_doclength(Xapian::docid did) const;
+
+	/// Get the number of unique terms in document.
+	Xapian::termcount get_unique_terms(Xapian::docid did) const;
 
 	/** Send a "keep-alive" to remote databases to stop them timing out.
 	 *
@@ -529,10 +516,11 @@ class XAPIAN_VISIBILITY_DEFAULT WritableDatabase : public Database {
 	 *
 	 *   - Xapian::DB_NO_SYNC don't call fsync() or similar
 	 *   - Xapian::DB_DANGEROUS don't be crash-safe, no concurrent readers
+	 *   - Xapian::DB_RETRY_LOCK to wait to get a write lock
 	 *
 	 *  @param block_size If a new database is created, this specifies
 	 *		      the block size (in bytes) for backends which
-	 *		      have such a concept.  For chert and brass, the
+	 *		      have such a concept.  For chert and glass, the
 	 *		      block size must be a power of 2 between 2048 and
 	 *		      65536 (inclusive), and the default (also used if
 	 *		      an invalid value is passed) is 8192 bytes.

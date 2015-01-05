@@ -141,8 +141,8 @@ libtransform_la_LIBADD = $(PCRE_LIBS)
 
 omega_SOURCES = omega.cc query.cc cgiparam.cc utils.cc configfile.cc date.cc\
  cdb_init.cc cdb_find.cc cdb_hash.cc cdb_unpack.cc jsonescape.cc loadfile.cc\
- datematchdecider.cc common/str.cc sample.cc unixperm.cc urlencode.cc\
- weight.cc expand.cc
+ datematchdecider.cc common/str.cc sample.cc urlencode.cc weight.cc expand.cc
+# Not currently used, and we ought to handle non-Unix perms too: unixperm.cc
 omega_LDADD =  $(MAGIC_LIBS) $(XAPIAN_LIBS) libtransform.la
 
 omindex_SOURCES = omindex.cc myhtmlparse.cc htmlparse.cc\
@@ -159,10 +159,10 @@ omindex_LDADD = $(MAGIC_LIBS) $(XAPIAN_LIBS)
 scriptindex_SOURCES = scriptindex.cc myhtmlparse.cc htmlparse.cc\
  common/getopt.cc commonhelp.cc utils.cc hashterm.cc loadfile.cc\
  common/safe.cc common/stringutils.cc utf8convert.cc utf8truncate.cc\
- common/keyword.cc
+ common/keyword.cc timegm.cc
 scriptindex_LDADD = $(XAPIAN_LIBS)
 
-omindex_list_SOURCES = omindex-list.cc
+omindex_list_SOURCES = common/getopt.cc omindex-list.cc
 omindex_list_LDADD = $(XAPIAN_LIBS)
 
 atomparsetest_SOURCES = atomparsetest.cc atomparse.cc htmlparse.cc\

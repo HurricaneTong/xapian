@@ -51,9 +51,33 @@ snowball_headers =\
 EXTRA_DIST += $(snowball_sources) $(snowball_headers) $(snowball_algorithms) $(snowball_built_sources)\
 	languages/collate-sbl\
 	languages/sbl-dispatch.h\
-	languages/dir_contents\
 	languages/Makefile\
 	languages/allsnowballheaders.h
+
+stopworddir = $(pkgdatadir)/stopwords
+dist_stopword_DATA = $(snowball_stopwords:.txt=.list)
+
+snowball_stopwords = \
+	languages/stopwords/arabic.txt\
+	languages/stopwords/danish.txt\
+	languages/stopwords/dutch.txt\
+	languages/stopwords/english.txt\
+	languages/stopwords/finnish.txt\
+	languages/stopwords/french.txt\
+	languages/stopwords/german.txt\
+	languages/stopwords/hungarian.txt\
+	languages/stopwords/italian.txt\
+	languages/stopwords/norwegian.txt\
+	languages/stopwords/portuguese.txt\
+	languages/stopwords/russian.txt\
+	languages/stopwords/spanish.txt\
+	languages/stopwords/swedish.txt
+
+.txt.list:
+if VPATH_BUILD
+	$(MKDIR_P) languages/stopwords
+endif
+	sed 's/[	 ]*|.*//;/^[	 ]*$$/d' < $< |sort|uniq > $@
 
 if MAINTAINER_MODE
 $(snowball_built_sources): languages/snowball $(snowball_algorithms)

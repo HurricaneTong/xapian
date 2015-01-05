@@ -71,7 +71,7 @@ DISTCLEANFILES += xapian-config
 
 EXTRA_DIST = ChangeLog ChangeLog.0 ChangeLog.examples HACKING PLATFORMS \
  xapian-core.spec include/xapian/error.h include/xapian/errordispatch.h \
- generate-exceptions exception_data.pm preautoreconf dir_contents
+ generate-exceptions exception_data.pm preautoreconf
 
 cmakedir = $(libdir)/cmake/xapian
 cmake_DATA = cmake/xapian-config.cmake cmake/xapian-config-version.cmake
@@ -83,6 +83,10 @@ include docsource.mk
 # Install the m4 file containing the XO_LIB_XAPIAN autoconf macro.
 m4datadir = $(datadir)/aclocal
 dist_m4data_DATA = m4-macros/xapian-1.3.m4
+
+# Install the pkg-config file containing the correct compiler options.
+pkgconfigdir = $(libdir)/pkgconfig
+nodist_pkgconfig_DATA = pkgconfig/xapian-core-1.3.pc
 
 libxapian_la = libxapian-1.3.la
 lib_LTLIBRARIES = libxapian-1.3.la

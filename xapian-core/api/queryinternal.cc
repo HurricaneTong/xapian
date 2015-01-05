@@ -36,6 +36,7 @@
 #include "matcher/maxpostlist.h"
 #include "matcher/multiandpostlist.h"
 #include "matcher/multixorpostlist.h"
+#include "matcher/nearpostlist.h"
 #include "matcher/orpostlist.h"
 #include "matcher/phrasepostlist.h"
 #include "matcher/queryoptimiser.h"
@@ -315,6 +316,7 @@ AndContext::add_pos_filter(Query::op op_,
 			   size_t n_subqs,
 			   Xapian::termcount window)
 {
+    Assert(n_subqs > 1);
     size_t end = pls.size();
     size_t begin = end - n_subqs;
     pos_filters.push_back(PosFilter(op_, begin, end, window));
@@ -431,7 +433,7 @@ Query::Internal::unserialise(const char ** p, const char * end,
 		    throw SerialisationError("Unknown multi-way branch Query operator");
 	    }
 	    do {
-		result->add_subquery(Xapian::Query(*unserialise(p, end, reg)));
+		result->add_subquery(Xapian::Query(unserialise(p, end, reg)));
 	    } while (--n_subqs);
 	    result->done();
 	    return result;
@@ -501,7 +503,7 @@ Query::Internal::unserialise(const char ** p, const char * end,
 		    using Xapian::Internal::QueryScaleWeight;
 		    double scale_factor = unserialise_double(p, end);
 		    return new QueryScaleWeight(scale_factor,
-						Query(*unserialise(p, end, reg)));
+						Query(unserialise(p, end, reg)));
 		}
 		case 0x0e: {
 		    Xapian::termcount wqf = decode_length(p, end, false);
@@ -516,7 +518,9 @@ Query::Internal::unserialise(const char ** p, const char * end,
 	    break;
 	}
     }
-    throw SerialisationError("Unknown Query serialisation");
+    string msg = "Unknown Query serialisation: ";
+    msg += str(ch);
+    throw SerialisationError(msg);
 }
 
 void
@@ -976,14 +980,14 @@ QueryBranch::do_max(QueryOptimiser * qopt, double factor) const
     if (factor == 0.0) {
 	// If we have a factor of 0, we don't care about the weights, so
 	// we're just like a normal OR query.
-	return ctx.postlist(qopt);
+	RETURN(ctx.postlist(qopt));
     }
 
     // We currently assume wqf is 1 for calculating the OP_MAX's weight
     // since conceptually the OP_MAX is one "virtual" term.  If we were
     // to combine multiple occurrences of the same OP_MAX expansion into
     // a single instance with wqf set, we would want to track the wqf.
-    return ctx.postlist_max(qopt);
+    RETURN(ctx.postlist_max(qopt));
 }
 
 Xapian::Query::op
@@ -1421,6 +1425,72 @@ QueryMax::postlist(QueryOptimiser * qopt, double factor) const
     PostList * pl = do_max(qopt, factor);
     qopt->set_total_subqs(save_total_subqs);
     RETURN(pl);
+}
+
+Xapian::Query::op
+QueryAnd::get_op() const
+{
+    return Xapian::Query::OP_AND;
+}
+
+Xapian::Query::op
+QueryOr::get_op() const
+{
+    return Xapian::Query::OP_OR;
+}
+
+Xapian::Query::op
+QueryAndNot::get_op() const
+{
+    return Xapian::Query::OP_AND_NOT;
+}
+
+Xapian::Query::op
+QueryXor::get_op() const
+{
+    return Xapian::Query::OP_XOR;
+}
+
+Xapian::Query::op
+QueryAndMaybe::get_op() const
+{
+    return Xapian::Query::OP_AND_MAYBE;
+}
+
+Xapian::Query::op
+QueryFilter::get_op() const
+{
+    return Xapian::Query::OP_FILTER;
+}
+
+Xapian::Query::op
+QueryNear::get_op() const
+{
+    return Xapian::Query::OP_NEAR;
+}
+
+Xapian::Query::op
+QueryPhrase::get_op() const
+{
+    return Xapian::Query::OP_PHRASE;
+}
+
+Xapian::Query::op
+QueryEliteSet::get_op() const
+{
+    return Xapian::Query::OP_ELITE_SET;
+}
+
+Xapian::Query::op
+QuerySynonym::get_op() const
+{
+    return Xapian::Query::OP_SYNONYM;
+}
+
+Xapian::Query::op
+QueryMax::get_op() const
+{
+    return Xapian::Query::OP_MAX;
 }
 
 string

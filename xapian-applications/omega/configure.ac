@@ -1,8 +1,8 @@
 dnl Process this file with autoconf to produce a configure script.
 
-AC_INIT([xapian-omega], [1.3.1], [http://xapian.org/bugs])
+AC_INIT([xapian-omega], [1.3.2], [http://xapian.org/bugs])
 AC_PREREQ([2.63])
-AM_INIT_AUTOMAKE([1.11 -Wportability tar-ustar no-dist-gzip dist-xz])
+AM_INIT_AUTOMAKE([1.11 -Wportability subdir-objects tar-ustar no-dist-gzip dist-xz])
 
 AC_CONFIG_SRCDIR([omega.cc])
 
@@ -24,6 +24,8 @@ AC_SUBST(NO_UNDEFINED)
 
 dnl Checks for programs.
 AC_PROG_CXX
+
+AC_CANONICAL_HOST
 
 # Checked: freebsd8.0 openbsd4.6 solaris2.9 solaris2.10
 case $host_os in
@@ -55,11 +57,12 @@ CXXFLAGS="$CXXFLAGS $XAPIAN_CXXFLAGS"
 dnl disable "maintainer only" rules by default
 AM_MAINTAINER_MODE
 
-dnl For _ftime64() on mingw we need to tell it we're happy to require
-dnl MSVCRT 6.10 or higher, which isn't too onerous a requirement it seems.
 case $host_os in
   *mingw*)
+    dnl For _ftime64() on mingw we need to tell it we're happy to require
+    dnl MSVCRT 6.10 or higher, which isn't too onerous a requirement it seems.
     AC_DEFINE([__MSVCRT_VERSION__], [0x0601], [Define on mingw to the minimum msvcrt version to assume])
+    AC_DEFINE([MINGW_HAS_SECURE_API], [1], [Define on mingw to get _s suffixed "secure" functions declared in headers])
     ;;
 esac
 
@@ -92,31 +95,16 @@ if test $ac_cv_header_magic_h != yes ; then
   if test -r /etc/debian_version ; then
     pkg="libmagic-dev"
   else
-    pkg="file-devel (or maybe libmagic-devl)"
+    pkg="file-devel (or maybe libmagic-devel)"
   fi
   AC_MSG_ERROR([libmagic required but magic.h not found.  If you're installing from packages, you probably need to install a package called something like $pkg in order to be able to build $PACKAGE_NAME.])
 fi
-save_LIBS=$LIBS
-LIBS=
-AC_ARG_VAR(MAGIC_PREFIX, [Prefix for libmagic])
-if test "$MAGIC_PREFIX"; then
-AC_SEARCH_LIBS([magic_open], [magic], [], [
-   MAGIC_LDFLAGS=-L$MAGIC_PREFIX/lib
-   save_LDFLAGS=$LDFLAGS
-   LDFLAGS="$LDFLAGS $MAGIC_LDFLAGS"
-   AC_CHECK_LIB([magic], [magic_open], [], [
-      MAGIC_LIBS=
-      ])
-   LDFLAGS=$save_LDFLAGS
-   AC_SUBST([MAGIC_LDFLAGS])
- ])
-else
-AC_SEARCH_LIBS([magic_open], [magic])
-fi
-dnl magic_descriptor was added in file-4.22 released 2007-12-27.
-AC_CHECK_FUNCS([magic_descriptor])
-MAGIC_LIBS=$LIBS
-LIBS=$save_LIBS
+
+dnl On mingw there are several dependent libraries, so AC_CHECK_LIB would
+dnl fail - we'd have to use LT_OUTPUT and then perform the test link with
+dnl libtool, but we've checked for magic.h, so checking the library would
+dnl not really gain us much - we know it is -lmagic.
+MAGIC_LIBS=-lmagic
 AC_SUBST([MAGIC_LIBS])
 
 dnl mingw (for instance) lacks ssize_t
@@ -265,7 +253,6 @@ if test no != "$with_iconv" ; then
   AC_SEARCH_LIBS(iconv, iconv, [], [
     if test -f "/sw/etc/fink.conf" ; then
       dnl For fink on OS X.
-      AC_CANONICAL_HOST
       case $host_os in
       darwin*)
 	ICONV_LDFLAGS=-L/sw/lib

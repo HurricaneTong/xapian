@@ -123,7 +123,7 @@ Database::reopen()
 	if ((*i)->reopen())
 	    maybe_changed = true;
     }
-    return maybe_changed;
+    RETURN(maybe_changed);
 }
 
 void
@@ -209,12 +209,6 @@ Database::termlist_begin(Xapian::docid did) const
 	tl = new MultiTermList(internal[n]->open_term_list(m), *this, n);
     }
     RETURN(TermIterator(tl));
-}
-
-TermIterator
-Database::allterms_begin() const
-{
-    return allterms_begin(string());
 }
 
 TermIterator
@@ -454,6 +448,20 @@ Database::get_doclength(Xapian::docid did) const
     Xapian::doccount n = (did - 1) % multiplier; // which actual database
     Xapian::docid m = (did - 1) / multiplier + 1; // real docid in that database
     RETURN(internal[n]->get_doclength(m));
+}
+
+Xapian::termcount
+Database::get_unique_terms(Xapian::docid did) const
+{
+    LOGCALL(API, Xapian::termcount, "Database::get_unique_terms", did);
+    if (did == 0)
+	docid_zero_invalid();
+    unsigned int multiplier = internal.size();
+    if (rare(multiplier == 0))
+	no_subdatabases();
+    Xapian::doccount n = (did - 1) % multiplier; // which actual database
+    Xapian::docid m = (did - 1) / multiplier + 1; // real docid in that database
+    RETURN(internal[n]->get_unique_terms(m));
 }
 
 Document

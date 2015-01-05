@@ -23,7 +23,7 @@
 #ifndef XAPIAN_INCLUDED_QUERYPARSER_H
 #define XAPIAN_INCLUDED_QUERYPARSER_H
 
-#if !defined XAPIAN_INCLUDED_XAPIAN_H && !defined XAPIAN_LIB_BUILD
+#if !defined XAPIAN_IN_XAPIAN_H && !defined XAPIAN_LIB_BUILD
 # error "Never use <xapian/queryparser.h> directly; include <xapian.h> instead."
 #endif
 
@@ -65,7 +65,15 @@ class XAPIAN_VISIBILITY_DEFAULT SimpleStopper : public Stopper {
     /// Default constructor.
     SimpleStopper() { }
 
-    /// Initialise from a pair of iterators.
+    /** Initialise from a pair of iterators.
+     *
+     * Xapian includes stop list files for many languages. You can initialise from a file like that:
+     * @code
+     * ifstream inFile ("stopwords/english/stop.txt");
+     * Xapian::SimplerStopper stopper(istream_iterator<string>(inFile), istream_iterator<string>());
+     * @endcode
+     *
+     */
 #if ! defined __SUNPRO_CC || __SUNPRO_CC - 0 >= 0x580
     template <class Iterator>
     SimpleStopper(Iterator begin, Iterator end) : stop_words(begin, end) { }

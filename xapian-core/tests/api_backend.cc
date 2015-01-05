@@ -38,12 +38,17 @@
 #include "safefcntl.h"
 #include "safesysstat.h"
 #include "safeunistd.h"
+#ifdef HAVE_SOCKETPAIR
+# include "safesyssocket.h"
+# include <signal.h>
+# include "safesyswait.h"
+#endif
 
 using namespace std;
 
 /// Regression test - lockfile should honour umask, was only user-readable.
-DEFINE_TESTCASE(lockfileumask1, brass || chert) {
-#if !defined __WIN32__ && !defined __CYGWIN__ && !defined __EMX__
+DEFINE_TESTCASE(lockfileumask1, chert || glass) {
+#if !defined __WIN32__ && !defined __CYGWIN__ && !defined __OS2__
     mode_t old_umask = umask(022);
     try {
 	Xapian::WritableDatabase db = get_named_writable_database("lockfileumask1");
@@ -93,8 +98,8 @@ DEFINE_TESTCASE(dbstats1, backend) {
     const Xapian::termcount max_wdf = 22;
 
     if (get_dbtype().find("chert") != string::npos ||
-	get_dbtype().find("brass") != string::npos) {
-	// Should be exact for brass and chert as no deletions have happened.
+	get_dbtype().find("glass") != string::npos) {
+	// Should be exact for chert and glass as no deletions have happened.
 	TEST_EQUAL(db.get_doclength_upper_bound(), max_len);
 	TEST_EQUAL(db.get_doclength_lower_bound(), min_len);
     } else {
@@ -166,8 +171,8 @@ DEFINE_TESTCASE(valuesaftercommit1, writable) {
     return true;
 }
 
-DEFINE_TESTCASE(lockfilefd0or1, brass || chert) {
-#if !defined __WIN32__ && !defined __CYGWIN__ && !defined __EMX__
+DEFINE_TESTCASE(lockfilefd0or1, chert || glass) {
+#if !defined __WIN32__ && !defined __CYGWIN__ && !defined __OS2__
     int old_stdin = dup(0);
     int old_stdout = dup(1);
     try {
@@ -209,7 +214,7 @@ DEFINE_TESTCASE(lockfilefd0or1, brass || chert) {
 }
 
 /// Regression test for bug fixed in 1.2.13 and 1.3.1.
-DEFINE_TESTCASE(lockfilealreadyopen1, brass || chert) {
+DEFINE_TESTCASE(lockfilealreadyopen1, chert || glass) {
     string path = get_named_writable_database_path("lockfilealreadyopen1");
     int fd = ::open((path + "/flintlock").c_str(), O_RDONLY);
     try {
@@ -667,7 +672,7 @@ DEFINE_TESTCASE(orcheck1, generated) {
  *
  *  We failed to mark the Btree as unmodified after cancel().
  */
-DEFINE_TESTCASE(failedreplace1, brass || chert) {
+DEFINE_TESTCASE(failedreplace1, chert || glass) {
     Xapian::WritableDatabase db(get_writable_database());
     Xapian::Document doc;
     doc.add_term("foo");
@@ -683,7 +688,7 @@ DEFINE_TESTCASE(failedreplace1, brass || chert) {
     return true;
 }
 
-DEFINE_TESTCASE(failedreplace2, brass || chert) {
+DEFINE_TESTCASE(failedreplace2, chert || glass) {
     Xapian::WritableDatabase db(get_writable_database("apitest_simpledata"));
     db.commit();
     Xapian::doccount db_size = db.get_doccount();
@@ -751,6 +756,16 @@ DEFINE_TESTCASE(bm25weight2, backend) {
     for (size_t i = 1; i != mset.size(); ++i) {
 	TEST_EQUAL(weight0, mset[i].get_weight());
     }
+    return true;
+}
+
+DEFINE_TESTCASE(unigramlmweight2,backend) {
+    Xapian::Database db(get_database("etext"));
+    Xapian::Enquire enquire(db);
+    enquire.set_query(Xapian::Query("the"));
+    enquire.set_weighting_scheme(Xapian::LMWeight());
+    Xapian::MSet mset = enquire.get_mset(0, 100);
+    TEST_REL(mset.size(),>=,2);
     return true;
 }
 
@@ -888,7 +903,7 @@ DEFINE_TESTCASE(itorskiptofromend1, backend) {
 // Regression test for bug fixed in 1.2.17 and 1.3.2 - the size gets fixed
 // but the uncorrected size was passed to the base file.  Also, abort() was
 // called on 0.
-DEFINE_TESTCASE(blocksize1, brass || chert) {
+DEFINE_TESTCASE(blocksize1, chert || glass) {
     string db_dir = "." + get_dbtype();
     mkdir(db_dir.c_str(), 0755);
     db_dir += "/db__blocksize1";
@@ -896,7 +911,7 @@ DEFINE_TESTCASE(blocksize1, brass || chert) {
     if (get_dbtype() == "chert") {
 	flags = Xapian::DB_CREATE|Xapian::DB_BACKEND_CHERT;
     } else {
-	flags = Xapian::DB_CREATE|Xapian::DB_BACKEND_BRASS;
+	flags = Xapian::DB_CREATE|Xapian::DB_BACKEND_GLASS;
     }
     static const unsigned bad_sizes[] = {
 	65537, 8000, 2000, 1024, 16, 7, 3, 1, 0
@@ -915,7 +930,7 @@ DEFINE_TESTCASE(blocksize1, brass || chert) {
 }
 
 /// Feature test for Xapian::DB_NO_TERMLIST.
-DEFINE_TESTCASE(notermlist1, brass) {
+DEFINE_TESTCASE(notermlist1, glass) {
     string db_dir = "." + get_dbtype();
     mkdir(db_dir.c_str(), 0755);
     db_dir += "/db__notermlist1";
@@ -923,7 +938,7 @@ DEFINE_TESTCASE(notermlist1, brass) {
     if (get_dbtype() == "chert") {
 	flags |= Xapian::DB_BACKEND_CHERT;
     } else {
-	flags |= Xapian::DB_BACKEND_BRASS;
+	flags |= Xapian::DB_BACKEND_GLASS;
     }
     rm_rf(db_dir);
     Xapian::WritableDatabase db(db_dir, flags);
@@ -937,7 +952,7 @@ DEFINE_TESTCASE(notermlist1, brass) {
     return true;
 }
 
-/// Regression test for bug starting a new brass freelist block.
+/// Regression test for bug starting a new glass freelist block.
 DEFINE_TESTCASE(newfreelistblock1, writable) {
     Xapian::Document doc;
     doc.add_term("foo");
@@ -955,6 +970,182 @@ DEFINE_TESTCASE(newfreelistblock1, writable) {
 	wdb.add_document(doc);
 	wdb.commit();
     }
+
+    return true;
+}
+
+/** Check that the parent directory for the database doesn't need to be
+ *  writable.  Regression test for early versions on the glass new btree
+ *  branch which failed to append a "/" when generating a temporary filename
+ *  from the database directory.
+ */
+DEFINE_TESTCASE(readonlyparentdir1, chert || glass) {
+#if !defined __WIN32__ && !defined __CYGWIN__ && !defined __OS2__
+    string path = get_named_writable_database_path("readonlyparentdir1");
+    // Fix permissions if the previous test was killed.
+    (void)chmod(path.c_str(), 0700);
+    mkdir(path.c_str(), 0777);
+    mkdir((path + "/sub").c_str(), 0777);
+    Xapian::WritableDatabase db = get_named_writable_database("readonlyparentdir1/sub");
+    TEST(chmod(path.c_str(), 0500) == 0);
+    try {
+	Xapian::Document doc;
+	doc.add_term("hello");
+	doc.set_data("some text");
+	db.add_document(doc);
+	db.commit();
+    } catch (...) {
+	// Attempt to fix the permissions, otherwise things like "rm -rf" on
+	// the source tree will fail.
+	(void)chmod(path.c_str(), 0700);
+	throw;
+    }
+    TEST(chmod(path.c_str(), 0700) == 0);
+#endif
+    return true;
+}
+
+static void
+make_phrasebug1_db(Xapian::WritableDatabase &db, const string &)
+{
+    Xapian::Document doc;
+    doc.add_posting("hurricane", 199881);
+    doc.add_posting("hurricane", 203084);
+    doc.add_posting("katrina", 199882);
+    doc.add_posting("katrina", 202473);
+    doc.add_posting("katrina", 203085);
+    db.add_document(doc);
+}
+
+/// Regression test for ticket#653, fixed in 1.3.2 and 1.2.19.
+DEFINE_TESTCASE(phrasebug1, generated && positional) {
+    Xapian::Database db = get_database("phrasebug1", make_phrasebug1_db);
+    const char * qterms[] = { "katrina", "hurricane" };
+    Xapian::Enquire e(db);
+    Xapian::Query q(q.OP_PHRASE, qterms, qterms + 2, 5);
+    e.set_query(q);
+    Xapian::MSet mset = e.get_mset(0, 100);
+    TEST_EQUAL(mset.size(), 0);
+    const char * qterms2[] = { "hurricane", "katrina" };
+    Xapian::Query q2(q.OP_PHRASE, qterms2, qterms2 + 2, 5);
+    e.set_query(q2);
+    mset = e.get_mset(0, 100);
+    TEST_EQUAL(mset.size(), 1);
+    return true;
+}
+
+/// Feature test for Xapian::DB_RETRY_LOCK
+DEFINE_TESTCASE(retrylock1, writable && !inmemory && !remote) {
+    // FIXME: Can't see an easy way to test this for remote databases - the
+    // harness doesn't seem to provide a suitable way to reopen a remote.
+#if defined HAVE_FORK && defined HAVE_SOCKETPAIR
+    int fds[2];
+    if (socketpair(AF_UNIX, SOCK_STREAM|SOCK_CLOEXEC, PF_UNSPEC, fds) < 0) {
+	FAIL_TEST("socketpair() failed");
+    }
+    if (fcntl(fds[1], F_SETFL, O_NONBLOCK) < 0)
+	FAIL_TEST("fcntl() failed to set O_NONBLOCK");
+    pid_t child = fork();
+    if (child == -1)
+	FAIL_TEST("fork() failed");
+    if (child == 0) {
+	// Wait for signal that parent has opened the database.
+	char ch;
+	while (read(fds[0], &ch, 1) < 0) { }
+
+	try {
+	    Xapian::WritableDatabase db2(get_named_writable_database_path("retrylock1"),
+					 Xapian::DB_OPEN|Xapian::DB_RETRY_LOCK);
+	    if (write(fds[0], "y", 1)) { }
+	} catch (const Xapian::DatabaseLockError &) {
+	    if (write(fds[0], "l", 1)) { }
+	} catch (const Xapian::Error &e) {
+	    const string & m = e.get_description();
+	    if (write(fds[0], m.data(), m.size())) { }
+	} catch (...) {
+	    if (write(fds[0], "o", 1)) { }
+	}
+	_exit(0);
+    }
+
+    close(fds[0]);
+
+    Xapian::WritableDatabase db = get_named_writable_database("retrylock1");
+    if (write(fds[1], "", 1) != 1)
+	FAIL_TEST("Failed to signal to child process");
+
+    char result[256];
+    int r = read(fds[1], result, sizeof(result));
+    if (r == -1) {
+	if (errno == EAGAIN) {
+	    // Good.
+	    result[0] = 'y';
+	} else {
+	    // Error.
+	    tout << "errno=" << errno << ": " << strerror(errno) << endl;
+	    result[0] = 'e';
+	}
+	r = 1;
+    } else if (r >= 1) {
+	if (result[0] == 'y') {
+	    // Child process managed to also get write lock!
+	    result[0] = '!';
+	}
+    } else {
+	// EOF.
+	result[0] = 'z';
+	r = 1;
+    }
+
+    try {
+	db.close();
+    } catch (...) {
+	kill(child, SIGKILL);
+	int status;
+	while (waitpid(child, &status, 0) < 0) {
+	    if (errno != EINTR) break;
+	}
+	throw;
+    }
+
+    if (result[0] == 'y') {
+	struct timeval tv;
+	tv.tv_sec = 3;
+	tv.tv_usec = 0;
+	fd_set f;
+	FD_ZERO(&f);
+	FD_SET(fds[1], &f);
+	int sr = select(fds[1] + 1, &f, NULL, &f, &tv);
+	if (sr == 0) {
+	    // Timed out.
+	    result[0] = 'T';
+	    r = 1;
+	} else {
+	    r = read(fds[1], result, sizeof(result));
+	    if (r == -1) {
+		// Error.
+		tout << "errno=" << errno << ": " << strerror(errno) << endl;
+		result[0] = 'E';
+		r = 1;
+	    } else if (r == 0) {
+		// EOF.
+		result[0] = 'Z';
+		r = 1;
+	    }
+	}
+    }
+
+    close(fds[1]);
+
+    kill(child, SIGKILL);
+    int status;
+    while (waitpid(child, &status, 0) < 0) {
+	if (errno != EINTR) break;
+    }
+
+    tout << string(result, r) << endl;
+    TEST_EQUAL(result[0], 'y');
+#endif
 
     return true;
 }

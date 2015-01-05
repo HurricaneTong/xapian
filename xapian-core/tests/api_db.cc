@@ -1284,7 +1284,7 @@ DEFINE_TESTCASE(postlist2, backend) {
     p = db.postlist_begin("this");
     pend = db.postlist_end("this");
     vector<Xapian::docid>::const_iterator i;
-    for (i = v.begin(); i != v.end(); i++) {
+    for (i = v.begin(); i != v.end(); ++i) {
 	TEST_NOT_EQUAL(p, pend);
 	TEST_EQUAL(*i, *p);
 	p++;
@@ -1787,9 +1787,12 @@ class MyWeight : public Xapian::Weight {
     double get_sumpart(Xapian::termcount, Xapian::termcount) const {
 	return scale_factor;
     }
+    double get_sumpart(Xapian::termcount, Xapian::termcount, Xapian::termcount) const {
+	return scale_factor;
+    }
     double get_maxpart() const { return scale_factor; }
 
-    double get_sumextra(Xapian::termcount) const { return 0; }
+    double get_sumextra(Xapian::termcount, Xapian::termcount) const { return 0; }
     double get_maxextra() const { return 0; }
 };
 

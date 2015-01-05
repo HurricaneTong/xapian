@@ -184,6 +184,7 @@ RemoteServer::run()
 		0, // MSG_GETMSET - used during a conversation.
 		0, // MSG_SHUTDOWN - handled by get_message().
 		&RemoteServer::msg_openmetadatakeylist,
+		&RemoteServer::msg_uniqueterms,
 	    };
 
 	    string message;
@@ -328,7 +329,17 @@ RemoteServer::msg_writeaccess(const string & msg)
     if (!writable) 
 	throw_read_only();
 
-    wdb = new Xapian::WritableDatabase(context, Xapian::DB_OPEN);
+    int flags = Xapian::DB_OPEN;
+    const char *p = msg.c_str();
+    const char *p_end = p + msg.size();
+    if (p != p_end) {
+	flags |= decode_length(&p, p_end, false) &~ Xapian::DB_ACTION_MASK_;
+	if (p != p_end) {
+	    throw Xapian::NetworkError("Junk at end of MSG_WRITEACCESS");
+	}
+    }
+
+    wdb = new Xapian::WritableDatabase(context, flags);
     delete db;
     db = wdb;
     msg_update(msg);
@@ -595,6 +606,15 @@ RemoteServer::msg_doclength(const string &message)
     const char *p_end = p + message.size();
     Xapian::docid did = decode_length(&p, p_end, false);
     send_message(REPLY_DOCLENGTH, encode_length(db->get_doclength(did)));
+}
+
+void
+RemoteServer::msg_uniqueterms(const string &message)
+{
+    const char *p = message.data();
+    const char *p_end = p + message.size();
+    Xapian::docid did = decode_length(&p, p_end, false);
+    send_message(REPLY_UNIQUETERMS, encode_length(db->get_unique_terms(did)));
 }
 
 void

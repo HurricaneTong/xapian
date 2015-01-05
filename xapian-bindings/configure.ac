@@ -4,11 +4,11 @@ dnl See xapian-core's HACKING document for details of the reasons for required
 dnl versions.
 AC_PREREQ([2.63])
 
-AC_INIT([xapian-bindings], [1.3.1], [http://xapian.org/bugs])
+AC_INIT([xapian-bindings], [1.3.2], [http://xapian.org/bugs])
 
 dnl See xapian-core's HACKING document for details of the reasons for required
 dnl versions.
-AM_INIT_AUTOMAKE([1.12.2 parallel-tests -Wportability tar-ustar no-dist-gzip dist-xz])
+AM_INIT_AUTOMAKE([1.12.2 parallel-tests -Wportability subdir-objects tar-ustar no-dist-gzip dist-xz])
 AC_CONFIG_SRCDIR([xapian-headers.i])
 
 AC_CONFIG_HEADERS([config.h])
@@ -16,11 +16,10 @@ AC_CONFIG_HEADERS([config.h])
 AC_CONFIG_MACRO_DIR([m4])
 
 dnl Mac OS X needs MACOSX_DEPLOYMENT_TARGET set to 10.3 (or higher) to
-dnl successfully link the SWIG generated modules.  The link always fails
-dnl on earlier versions of Mac OS X (10.1.4 and 10.2.8 tested), so always
-dnl setting MACOSX_DEPLOYMENT_TARGET to at least 10.3 seems to be the
-dnl appropriate thing to do.  Most Mac OS X developers will have upgraded
-dnl from 10.1 and 10.2 by now anyhow.
+dnl successfully link the SWIG generated modules.  The link always fails on
+dnl earlier versions of Mac OS X (10.1.4 and 10.2.8 tested), and these versions
+dnl are long obsolete now, so we just ensure that MACOSX_DEPLOYMENT_TARGET is
+dnl set to at least 10.3.
 dnl
 dnl NB we must do this *BEFORE* LT_INIT since that is what checks
 dnl MACOSX_DEPLOYMENT_TARGET.
@@ -165,7 +164,7 @@ if test yes = "$enable_documentation" ; then
   dnl Check for rst2html. (Needed to make HTML from reStructuredText format)
   dnl Also look for rst2html.py, which archlinux reportedly installs it as.
   AC_PATH_PROGS(RST2HTML, [rst2html rst2html.py], [])
-  test -z "$RST2HTML" && AC_MSG_ERROR([rst2html is required to build documentation])
+  test -z "$RST2HTML" && AC_MSG_ERROR([rst2html is required to build documentation (try package python-docutils)])
 fi
 
 if test x$USE_MAINTAINER_MODE = xyes; then
@@ -179,20 +178,13 @@ if test x$USE_MAINTAINER_MODE = xyes; then
   if test -z "$SWIG" ; then
     AC_MSG_ERROR([Can't find SWIG utility])
   fi
-  dnl Check for swig >= 1.3.40 (SVN rev 11194):
+  dnl Check for new enough SWIG.
   dnl
-  dnl 1.3.30 produces class wrappers for PHP5
-  dnl 1.3.32 fixes PHP5 wrappers for overloaded forms with default arguments,
-  dnl memory leaks for PHP4 and PHP5, some problems with ZTS-enabled PHP builds
-  dnl (noted on Windows; Linux builds of PHP generally don't enable ZTS), and
-  dnl several other issues.
-  dnl 1.3.40 fixes Python 3.0.1 support and removes superfluous GIL locking to
-  dnl workaround mod_python problems.
+  dnl 3.0.3 fixes some problems with subclassing wrapped Xapian classes in PHP.
   v=`$SWIG -version 2>&1|sed 's/^SWIG Version \([[0-9\.]]*\).*/\1/p;d'`
   case $v in
-    [1.3.[4-9][0-9]|1.[4-9].*|2.*]) ;;
-    *)
-      msg="SWIG >= 1.3.40 (SVN rev 11194 or later) required (you have ${v:-an unknown version})"
+    [[012].*|3.0.[012]|""])
+      msg="SWIG >= 3.0.3 (commit e12322d) required (you have ${v:-an unknown version})"
       if test -n "$swigoverridden" ; then
 	dnl If SWIG was explicitly set, make this a warning only.
 	AC_MSG_WARN([$msg])
@@ -488,7 +480,7 @@ dnl we need sphinx-build
 case $enable_documentation$BINDINGS in
 yes*python*)
   AC_PATH_PROG(SPHINX_BUILD, sphinx-build, [])
-  test -z "$SPHINX_BUILD" && AC_MSG_ERROR([sphinx-build is required to build python documentation])
+  test -z "$SPHINX_BUILD" && AC_MSG_ERROR([sphinx-build is required to build python documentation (try packages python-sphinx and python3-sphinx)])
   ;;
 esac
 
@@ -717,7 +709,7 @@ if test no != "$with_csharp" ; then
     fi
     if test -z "$CSC" ; then
       dnl gmcs, smcs, and dmcs are versions of the Mono CSharp compiler
-      dnl targetting various runtime versions, deprecated in favour of mcs
+      dnl targeting various runtime versions, deprecated in favour of mcs
       dnl (checked for above) as of Mono 2.11.
       dnl
       dnl cscc is the Portable.NET CSharp compiler.
@@ -1017,7 +1009,7 @@ if test no != "$with_ruby" ; then
 
 	  dnl In a VPATH build, the ruby subdirectory won't exist the first
 	  dnl time.
-	  test -d ruby || mkdir ruby
+	  AS_MKDIR_P([ruby])
 
 	  dnl Newer Ruby has ruby/io.h - older has rubyio.h.  Ruby doesn't
 	  dnl seem to provide any way to generate code which works with
@@ -1173,23 +1165,36 @@ if test no != "$with_lua" ; then
       AC_MSG_RESULT([$lua_version])
 
       AC_ARG_VAR([LUA_LIB], [Directory to install compiled Lua modules into])
-      AC_ARG_VAR([LUA_SO], [Extension for compiled Lua modules])
+      AC_ARG_VAR([LUA_SO], [Extension for compiled Lua modules (e.g. LUA_SO=.so)])
       AC_MSG_CHECKING([for directory to install compiled Lua modules into])
       if test -z "$LUA_LIB" -o -z "$LUA_SO" ; then
 	lua_cpath=`$LUA -e 'require("package") print(package.cpath)'`
 	dnl Look for the first absolute path in lua_cpath which has leaf
 	dnl "?.<ext>" and put the directory part into lua_lib and <ext> into
-	dnl lua_so.
+	dnl lua_so.  If LUA_SO was specified by the user, only consider
+	dnl entries where <ext> matches LUA_SO.
 	lua_lib=
 	lua_so=
-	[lua_so_pat=${LUA_SO:-'[a-zA-Z][a-zA-Z]*'}]
-	lua_so_pat=`echo "X$lua_so_pat"|sed 's/^X\.\?//'`
+	case $LUA_SO in
+	  "")
+	   [lua_so_pat='[a-zA-Z][a-zA-Z]*'] ;;
+	  .*)
+	    dnl If LUA_SO has a leading '.', remove it.
+	    lua_so_pat=`AS_ECHO("$LUA_SO")|sed 's/^\.//'` ;;
+	  *)
+	    dnl If LUA_SO was specified without a leading '.', add one to the
+	    dnl value substituted into Makefile.in.
+	    lua_so_pat=$LUA_SO
+	    LUA_SO=.$LUA_SO
+	    ;;
+	esac
 	while test x"$lua_cpath" != x ; do
 	  [lua_lib=`expr X"$lua_cpath" : X'\([^;]*\)'`]
 	  lua_so=.`expr X"$lua_lib" : X'/.*/?\.\('"$lua_so_pat"'\)$'`
 	  case $lua_so in
 	    .|.lua)
 	      dnl If someone has foolishly put ?.lua in cpath, ignore them.
+	      lua_lib=
 	      ;;
 	    *)
 	      lua_lib=`expr X"$lua_lib" : X'\(/.*\)/?\.'"$lua_so_pat"'$'`
